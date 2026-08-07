@@ -1,59 +1,91 @@
-function reply() {
+async function reply() {
 
-  let msg = document.getElementById("msg");
-  let chat = document.getElementById("chatBox");
+  const msg = document.getElementById("msg");
+  const chat = document.getElementById("chatBox");
 
-  let text = msg.value.trim();
+  const text = msg.value.trim();
 
   if (text === "") return;
 
-  // User Message
+  // User message
   chat.innerHTML += `
     <div class="user">
-      🧑 ${text}
+      🧑 ${escapeHtml(text)}
     </div>
   `;
 
   msg.value = "";
-
-  // Auto Scroll
   chat.scrollTop = chat.scrollHeight;
 
-  let ans = "😊 Main abhi seekh rahi hoon.";
+  // Typing message
+  const typing = document.createElement("div");
+  typing.className = "bot";
+  typing.id = "typing";
+  typing.innerHTML = "👧 Ayra is thinking...";
 
-  let t = text.toLowerCase();
+  chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
 
-  if (t.includes("hi") || t.includes("hello")) {
-    ans = "👋 Hi Asfak! Main Ayra hoon ❤️";
-  }
-  else if (t.includes("kaise ho")) {
-    ans = "😊 Main bilkul theek hoon. Tum kaise ho?";
-  }
-  else if (t.includes("tumhe kisne banaya")) {
-    ans = "💜 Mujhe Asfak ne banaya hai.";
-  }
-  else if (t.includes("bye")) {
-    ans = "👋 Bye Asfak! Jaldi milte hain.";
-  }
+  try {
 
-  // Typing...
-  setTimeout(function () {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text
+      })
+    });
+
+    const data = await response.json();
+
+    typing.remove();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Something went wrong");
+    }
 
     chat.innerHTML += `
       <div class="bot">
-        ${ans}
+        👧 ${escapeHtml(data.reply)}
       </div>
     `;
 
-    chat.scrollTop = chat.scrollHeight;
+  } catch (error) {
 
-  }, 700);
+    typing.remove();
 
+    chat.innerHTML += `
+      <div class="bot">
+        👧 Sorry Asfak 😔<br>
+        Abhi AI se connection nahi ho pa raha.
+      </div>
+    `;
+
+    console.error(error);
+  }
+
+  chat.scrollTop = chat.scrollHeight;
 }
 
-// Enter Key Support
-document.getElementById("msg").addEventListener("keypress", function (e) {
+
+// Enter key support
+document.getElementById("msg").addEventListener("keypress", function(e) {
+
   if (e.key === "Enter") {
     reply();
   }
+
 });
+
+
+// Security: HTML ko message ke andar execute hone se rokta hai
+function escapeHtml(text) {
+
+  const div = document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
+}
