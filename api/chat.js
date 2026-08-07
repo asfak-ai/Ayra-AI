@@ -6,56 +6,60 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message } = req.body;
+    const { message } = req.body || {};
 
     if (!message || !message.trim()) {
       return res.status(400).json({
-        error: "Message is required"
+        error: "Message missing"
       });
     }
 
+    // Check Vercel environment variable
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({
-        error: "Gemini API key is not configured"
+        error: "GEMINI_API_KEY is missing in Vercel Environment Variables"
       });
     }
 
-    const response = await fetch(
+    const url =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-        encodeURIComponent(apiKey),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text:
-                    "You are Ayra, Asfak's friendly personal AI assistant. " +
-                    "Reply naturally and helpfully. You can understand Hindi, Hinglish and English. " +
-                    "Keep replies friendly and reasonably concise.\n\n" +
-                    "User: " +
-                    message
-                }
-              ]
-            }
-          ]
-        })
-      }
-    );
+      encodeURIComponent(apiKey);
 
-    const data = await response.json();
+    const geminiResponse = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text:
+                  "You are Ayra, a friendly AI assistant created by Asfak. " +
+                  "Understand Hindi, Hinglish and English. " +
+                  "Answer the user's question naturally and helpfully.\n\n" +
+                  "User: " +
+                  message
+              }
+            ]
+          }
+        ]
+      })
+    });
 
-    if (!response.ok) {
-      console.error("Gemini error:", data);
+    const data = await geminiResponse.json();
 
-      return res.status(response.status).json({
-        error: "Gemini API request failed"
+    // Gemini returned an error
+    if (!geminiResponse.ok) {
+      console.error("GEMINI ERROR:", data);
+
+      return res.status(500).json({
+        error:
+          "Gemini API Error: " +
+          (data?.error?.message || "Unknown Gemini error")
       });
     }
 
@@ -63,8 +67,10 @@ export default async function handler(req, res) {
       data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!answer) {
+      console.error("NO ANSWER:", data);
+
       return res.status(500).json({
-        error: "No response received from Gemini"
+        error: "Gemini returned no answer"
       });
     }
 
@@ -73,10 +79,10 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("SERVER ERROR:", error);
 
     return res.status(500).json({
-      error: "Something went wrong"
+      error: "Server Error: " + error.message
     });
   }
-      }
+}
