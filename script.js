@@ -58,13 +58,30 @@ async function reply() {
       </div>
     `;
 
-  } catch (error) {
+    } catch (error) {
+
     typing.remove();
+
+    let friendlyMessage;
+
+    if (
+      error.message.includes("quota") ||
+      error.message.includes("Quota exceeded") ||
+      error.message.includes("rate limit") ||
+      error.message.includes("429")
+    ) {
+      friendlyMessage =
+        "😔 Oops Asfak! Abhi Ayra ka AI quota thodi der ke liye full ho gaya hai. 💜 " +
+        "Please thodi der baad dobara try karna. ⏳";
+    } else {
+      friendlyMessage =
+        "🥺 Sorry Asfak! Ayra abhi tumse connect nahi ho pa rahi. " +
+        "Thodi der baad dobara try karna. 💜";
+    }
 
     chat.innerHTML += `
       <div class="bot">
-        👧 ❌ Error:<br>
-        ${escapeHtml(error.message)}
+        👧 ${friendlyMessage}
       </div>
     `;
 
